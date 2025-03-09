@@ -144,36 +144,42 @@
         .getElementById("upload-button")
         .addEventListener("click", async function (event) {
           let file = document.getElementById("file-input").files[0];
-          console.log(file);
-          alert("file stored");
-          if (file && file.type === "application/pdf") {
-            let arrayBuffer = await file.arrayBuffer(); // Convert file to ArrayBuffer
 
-            // Convert ArrayBuffer to JSON-friendly format
-            let jsonData = {
-              fileName: file.name,
-              pdfData: Array.from(new Uint8Array(arrayBuffer)), // Convert ArrayBuffer to an array
-              roomId: getRoomIdFromUrl(),
-            };
-            alert("file json done");
-            // Send to backend
+          if (!file) {
+            alert("Please select a PDF file.");
+            return;
+          }
+
+          if (file.type !== "application/pdf") {
+            alert("Invalid file type. Please upload a PDF.");
+            return;
+          }
+
+          let formData = new FormData();
+          formData.append("datapdf", file);
+          formData.append("roomId", getRoomIdFromUrl()); // Send additional data if needed
+          alert("form created");
+
+          try {
             let response = await fetch(
               "https://sew-backend.vercel.app/upload",
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(jsonData),
+                body: formData, // No need for Content-Type; browser sets it automatically
               }
             );
-            alert("file upload done");
+
+            if (!response.ok) {
+              throw new Error("File upload failed");
+            }
+
             let result = await response.json();
-            alert(`File uploaded succesfully. Please refresh the page`);
-            alert("Upload Response:", result);
-          } else {
-            console.log("Please upload a valid PDF file.");
+            alert("File uploaded successfully. Please refresh the page.");
+            console.log("Upload Response:", result);
+          } catch (error) {
+            alert("Error uploading file: " + error.message);
           }
         });
-
       // Function to logout
       document
         .getElementById("logout-button")
