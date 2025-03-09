@@ -65,13 +65,16 @@
       // fetch and display PDF files
       async function fetchAndDisplayPdfs() {
         const roomId = getRoomIdFromUrl(); // Extract the room ID from the URL
-        const response = await fetch("http://localhost:5000/api/getPdfNames", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ roomId }),
-        });
+        const response = await fetch(
+          "http://sew-backend.vercel.app/api/getPdfNames",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ roomId }),
+          }
+        );
 
         const data = await response.json();
         const pdfs = data.pdfIds; // Assuming the response contains an array of PDF names
@@ -91,7 +94,7 @@
               if (per) {
                 console.log(pdfname);
                 const response = await fetch(
-                  `http://localhost:5000/api/download`,
+                  `http://sew-backend.vercel.app/api/download`,
                   {
                     method: "POST",
                     headers: {
@@ -153,7 +156,7 @@
             };
 
             // Send to backend
-            let response = await fetch("http://localhost:5000/upload", {
+            let response = await fetch("http://sew-backend.vercel.app/upload", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(jsonData),

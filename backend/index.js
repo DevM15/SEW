@@ -5,7 +5,15 @@ const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
 const app = express();
 
 // Middleware
-app.use(cors()); // Allow frontend to connect
+//app.use(cors()); // Allow frontend to connect
+app.use(
+  cors({
+    origin: "https://sewit.vercel.app", // Allow this domain only
+    origin: "*",
+    methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
+    credentials: true, // Allow cookies
+  })
+);
 //app.use(express.json()); // Parse JSON bodies
 app.use(express.json({ limit: "50mb" })); // Increase JSON request size limit
 app.use(express.urlencoded({ limit: "50mb", extended: true })); // Increase URL-encoded size limit
@@ -128,7 +136,7 @@ async function uploadPDF(arrayBuffer, fileName, roomId) {
       roomId,
       createdAt: new Date(), // Current timestamp
     });
-    await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }); // 7 days
+    await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }); // 7 days
 
     console.log("Collection updated with PDF ID");
 
