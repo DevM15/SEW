@@ -145,6 +145,7 @@
         .addEventListener("click", async function (event) {
           let file = document.getElementById("file-input").files[0];
           console.log(file);
+          alert("file stored");
           if (file && file.type === "application/pdf") {
             let arrayBuffer = await file.arrayBuffer(); // Convert file to ArrayBuffer
 
@@ -154,7 +155,7 @@
               pdfData: Array.from(new Uint8Array(arrayBuffer)), // Convert ArrayBuffer to an array
               roomId: getRoomIdFromUrl(),
             };
-
+            alert("file json done");
             // Send to backend
             let response = await fetch(
               "https://sew-backend.vercel.app/upload",
@@ -164,10 +165,10 @@
                 body: JSON.stringify(jsonData),
               }
             );
-
+            alert("file upload done");
             let result = await response.json();
             alert(`File uploaded succesfully. Please refresh the page`);
-            console.log("Upload Response:", result);
+            alert("Upload Response:", result);
           } else {
             console.log("Please upload a valid PDF file.");
           }
