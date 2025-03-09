@@ -66,7 +66,7 @@
       async function fetchAndDisplayPdfs() {
         const roomId = getRoomIdFromUrl(); // Extract the room ID from the URL
         const response = await fetch(
-          "http://sew-backend.vercel.app/api/getPdfNames",
+          "https://sew-backend.vercel.app/api/getPdfNames",
           {
             method: "POST",
             headers: {
@@ -94,7 +94,7 @@
               if (per) {
                 console.log(pdfname);
                 const response = await fetch(
-                  `http://sew-backend.vercel.app/api/download`,
+                  `https://sew-backend.vercel.app/api/download`,
                   {
                     method: "POST",
                     headers: {
@@ -156,11 +156,14 @@
             };
 
             // Send to backend
-            let response = await fetch("http://sew-backend.vercel.app/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(jsonData),
-            });
+            let response = await fetch(
+              "https://sew-backend.vercel.app/upload",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(jsonData),
+              }
+            );
 
             let result = await response.json();
             alert(`File uploaded succesfully. Please refresh the page`);

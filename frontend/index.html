@@ -62,7 +62,7 @@
 
           try {
             const response = await fetch(
-              "http://sew-backend.vercel.app/api/joinRoom",
+              "https://sew-backend.vercel.app/api/joinRoom",
               {
                 method: "POST",
                 headers: {
@@ -90,7 +90,7 @@
         .addEventListener("click", async () => {
           try {
             const response = await fetch(
-              "http://sew-backend.vercel.app/api/newRoom"
+              "https://sew-backend.vercel.app/api/newRoom"
             );
             const data = await response.json();
             const roomId = data.roomId;
