@@ -159,6 +159,7 @@
           formData.append("datapdf", file);
           formData.append("roomId", getRoomIdFromUrl()); // Send additional data if needed
           alert("form created");
+          console.log(formData);
 
           try {
             let response = await fetch(
