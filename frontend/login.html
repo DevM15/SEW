@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - PDF Share Hub</title>
+    <!-- Include Tailwind CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <!-- Include Bootstrap CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+    <header class="text-center text-4xl font-bold mb-8">SEW</header>
+    <div
+      class="login-container bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
+    >
+      <div>
+        <p>join an existing room:</p>
+      </div>
+      <div class="text-center mb-4 hidden">or</div>
+      <form id="login-form">
+        <div class="form-group mb-4">
+          <input
+            type="text"
+            id="room-id"
+            class="form-control"
+            placeholder="Enter Room ID"
+            required
+            minlength="6"
+            maxlength="6"
+            pattern="\d{6}"
+            title="Please enter exactly 6 digits."
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-full mb-4">
+          Enter Room
+        </button>
+        <div>
+          <p>create a new room:</p>
+        </div>
+        <button
+          type="button"
+          id="random-login"
+          class="btn btn-secondary w-full"
+        >
+          New Room
+        </button>
+      </form>
+    </div>
+    <script>
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const roomId = document.getElementById("room-id").value;
+
+          try {
+            const response = await fetch("http://localhost:5000/api/joinRoom", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ roomId }),
+            });
+
+            const data = await response.json();
+            console.log(data);
+            if (data.message === "Room exists!") {
+              alert(`Joined to RoomID:${roomId} successfully`);
+              window.location.href = `home.html?room=${roomId}`;
+            } else {
+              alert("Room does not exist!"); // Handle the case where the room does not exist
+            }
+          } catch (error) {
+            console.error("Error fetching data:", error);
+          }
+        });
+
+      document
+        .getElementById("random-login")
+        .addEventListener("click", async () => {
+          try {
+            const response = await fetch("http://localhost:5000/api/newRoom");
+            const data = await response.json();
+            const roomId = data.roomId;
+            alert(`RoomID : ${roomId} created successfully`);
+            window.location.href = `home.html?room=${roomId}`;
+          } catch (error) {
+            console.error("Error fetching data:", error);
+          }
+        });
+    </script>
+  </body>
+</html>

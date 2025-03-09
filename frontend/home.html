@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Share Hub</title>
+    <!-- Include Tailwind CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <!-- Include Bootstrap CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100">
+    <div class="container mx-auto p-5">
+      <header class="text-center text-4xl font-bold mb-8">SEW</header>
+      <!-- User Info Section -->
+      <div
+        class="user-info bg-white p-4 rounded-lg shadow mb-8 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4"
+      >
+        <p class="text-lg mb-0 md:mb-0">
+          <strong>Room ID:</strong> <span id="room-id"></span>
+        </p>
+        <input
+          type="file"
+          id="file-input"
+          accept="application/pdf"
+          name="datapdf"
+          placeholder="upload pdf"
+        />
+        <button id="upload-button" class="btn btn-primary">Upload PDF</button>
+        <button id="logout-button" class="btn btn-danger">Log Out</button>
+      </div>
+      <div
+        class="pdf-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        id="pdf-list"
+      >
+        <!-- PDF cards will be dynamically added here -->
+      </div>
+    </div>
+    <script>
+      function downloadpdf(e) {
+        console.log(e.target.value);
+      }
+
+      // Function to extract the room ID from the URL
+      function getRoomIdFromUrl() {
+        // Get the full URL
+        const url = new URL(window.location.href);
+
+        // Extract the 'room' parameter from the query string (e.g., ?room=12345)
+        const roomId = url.searchParams.get("room");
+
+        // Return the room ID or a default message if not found
+        return roomId ? roomId : "No room ID found";
+      }
+
+      // Display the room ID on the page
+      document.getElementById("room-id").textContent = getRoomIdFromUrl();
+
+      // fetch and display PDF files
+      async function fetchAndDisplayPdfs() {
+        const roomId = getRoomIdFromUrl(); // Extract the room ID from the URL
+        const response = await fetch("http://localhost:5000/api/getPdfNames", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ roomId }),
+        });
+
+        const data = await response.json();
+        const pdfs = data.pdfIds; // Assuming the response contains an array of PDF names
+        console.log(pdfs); // Log the PDF names to the console for debugging
+        if (pdfs != "null") {
+          console.log("PDFs found");
+          const pdfList = document.getElementById("pdf-list");
+          pdfList.innerHTML = ""; // Clear existing content
+
+          pdfs.forEach((pdf) => {
+            const pdfCard = document.createElement("div");
+            pdfCard.className =
+              "bg-white p-4 rounded-lg shadow flex flex-col items-center";
+            pdfCard.addEventListener("click", async (event) => {
+              let pdfname = event.target.innerText;
+              let per = confirm(`Do you want to download ${pdfname}`);
+              if (per) {
+                console.log(pdfname);
+                const response = await fetch(
+                  `http://localhost:5000/api/download`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ pdfname }),
+                  }
+                );
+                if (!response.ok) {
+                  throw new Error("Failed to download PDF");
+                }
+
+                // Convert response to a Blob
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // Create a temporary link and trigger download
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${pdfname}`; // Set default name
+                document.body.appendChild(a);
+                a.click();
+
+                // Clean up
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+              }
+            });
+            pdfCard.innerHTML = `
+                  <h3 class="text-xl font-semibold mb-2">${pdf}</h3>
+                `;
+            pdfList.appendChild(pdfCard);
+          });
+        }
+      }
+
+      fetchAndDisplayPdfs(); // Initial fetch and display of PDFs
+
+      // Function to handle file upload
+      // document
+      //   .getElementById("upload-button")
+      //   .addEventListener("click", function () {
+      //     const pdf = document.getElementById("file-input").click();
+      //   });
+
+      document
+        .getElementById("upload-button")
+        .addEventListener("click", async function (event) {
+          let file = document.getElementById("file-input").files[0];
+          console.log(file);
+          if (file && file.type === "application/pdf") {
+            let arrayBuffer = await file.arrayBuffer(); // Convert file to ArrayBuffer
+
+            // Convert ArrayBuffer to JSON-friendly format
+            let jsonData = {
+              fileName: file.name,
+              pdfData: Array.from(new Uint8Array(arrayBuffer)), // Convert ArrayBuffer to an array
+              roomId: getRoomIdFromUrl(),
+            };
+
+            // Send to backend
+            let response = await fetch("http://localhost:5000/upload", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(jsonData),
+            });
+
+            let result = await response.json();
+            alert(`File uploaded succesfully. Please refresh the page`);
+            console.log("Upload Response:", result);
+          } else {
+            console.log("Please upload a valid PDF file.");
+          }
+        });
+
+      // Function to logout
+      document
+        .getElementById("logout-button")
+        .addEventListener("click", function () {
+          window.location.href = `login.html`; // Redirect to the login page
+        });
+    </script>
+  </body>
+</html>
