@@ -9,6 +9,7 @@ const app = express();
 app.use(
   cors({
     origin: "https://sewit.vercel.app", // Allow this domain only
+    origin: "*",
     methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
     credentials: true, // Allow cookies
   })
@@ -111,23 +112,39 @@ async function checkAndAddRoom() {
   }
 }
 
-async function uploadPDF(pdf, roomId) {
+async function uploadPDF(arrayBuffer, fileName, roomId) {
   try {
     await client.connect();
     console.log("Connected to MongoDB Atlas");
 
     const db = client.db("room_id"); // Change this to your database name
+    const bucket = new GridFSBucket(db, { bucketName: "pdfs" });
+
+    console.log("Bucket initialized");
+
+    // Convert ArrayBuffer to Buffer
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Open upload stream
+    const uploadStream = bucket.openUploadStream(fileName);
 
     // Store metadata (optional)
     const collection = db.collection("room");
-    await collection
-      .insertOne({
-        pdfId: pdf.id,
-        fileName: pdf.filename,
-        roomId: roomId,
-        createdAt: new Date(), // Current timestamp
-      })
-      .createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 });
+    await collection.insertOne({
+      pdfId: uploadStream.id,
+      fileName,
+      roomId,
+      createdAt: new Date(), // Current timestamp
+    });
+    await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }); // 7 days
+
+    console.log("Collection updated with PDF ID");
+
+    // Write Buffer to GridFS
+    uploadStream.end(buffer);
+
+    console.log(`PDF uploaded successfully with ID: ${uploadStream.id}`);
+    return uploadStream.id; // Return file ID for reference
   } catch (error) {
     console.error("Error uploading PDF:", error);
     throw error;
@@ -188,28 +205,19 @@ app.post("/api/download", async (req, res) => {
   }
 });
 
-app.post("/upload", upload.single("datapdf"), async (req, res) => {
+app.post("/upload", async (req, res) => {
   try {
-    if (!req.file || !req.body.roomId) {
-      return res.status(400).json({ error: "Missing file or room ID" });
-    }
+    const { fileName, pdfData, roomId } = req.body;
+    if (!fileName || !pdfData || !roomId)
+      return res.status(400).json({ error: "Missing file data" });
 
-    uploadPDF(req.file, req.body.roomId);
+    // Convert JSON array back to ArrayBuffer
+    const arrayBuffer = new Uint8Array(pdfData).buffer;
 
-    // // Save metadata separately (optional)
-    // const collection = conn.db.collection("room");
-    // await collection.insertOne({
-    //   pdfId: req.file.id,
-    //   fileName: req.file.filename,
-    //   roomId: req.body.roomId,
-    //   createdAt: new Date(),
-    // });
+    // Upload to MongoDB
+    const fileId = await uploadPDF(arrayBuffer, fileName, roomId);
 
-    res.json({
-      success: true,
-      fileId: req.file.id,
-      fileName: req.file.filename,
-    });
+    res.json({ success: true, fileId });
   } catch (error) {
     console.error("Error processing upload:", error);
     res.status(500).json({ error: "Internal server error" });
