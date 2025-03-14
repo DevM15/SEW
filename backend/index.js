@@ -9,7 +9,7 @@ const app = express();
 // app.use(cors()); // Allow frontend to connect
 app.use(
   cors({
-    origin: "https://sewit.vercel.app", // Allow this domain only
+    origin: "*", // Allow this domain only
     methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
     credentials: true, // Allow cookies
   })
