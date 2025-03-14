@@ -65,16 +65,13 @@
       // fetch and display PDF files
       async function fetchAndDisplayPdfs() {
         const roomId = getRoomIdFromUrl(); // Extract the room ID from the URL
-        const response = await fetch(
-          "https://sew-backend.vercel.app/api/getPdfNames",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ roomId }),
-          }
-        );
+        const response = await fetch("http://localhost:5000/api/getPdfNames", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ roomId }),
+        });
 
         const data = await response.json();
         const pdfs = data.pdfIds; // Assuming the response contains an array of PDF names
@@ -94,7 +91,7 @@
               if (per) {
                 console.log(pdfname);
                 const response = await fetch(
-                  `https://sew-backend.vercel.app/api/download`,
+                  `http://localhost:5000/api/download`,
                   {
                     method: "POST",
                     headers: {
@@ -144,26 +141,18 @@
         .getElementById("upload-button")
         .addEventListener("click", async function (event) {
           let file = document.getElementById("file-input").files[0];
+          let roomId = getRoomIdFromUrl();
           console.log(file);
           if (file && file.type === "application/pdf") {
-            let arrayBuffer = await file.arrayBuffer(); // Convert file to ArrayBuffer
-
-            // Convert ArrayBuffer to JSON-friendly format
-            let jsonData = {
-              fileName: file.name,
-              pdfData: Array.from(new Uint8Array(arrayBuffer)), // Convert ArrayBuffer to an array
-              roomId: getRoomIdFromUrl(),
-            };
+            const formData = new FormData();
+            formData.append("pdf", file);
+            formData.append("roomId", roomId);
 
             // Send to backend
-            let response = await fetch(
-              "https://sew-backend.vercel.app/upload",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(jsonData),
-              }
-            );
+            let response = await fetch("http://localhost:5000/upload", {
+              method: "POST",
+              body: formData,
+            });
 
             let result = await response.json();
             alert(`File uploaded succesfully. Please refresh the page`);

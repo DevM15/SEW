@@ -1,19 +1,21 @@
 const express = require("express");
+const multer = require("multer");
+const mongoose = require("mongoose");
 const cors = require("cors");
 const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
 
 const app = express();
 
 // Middleware
-//app.use(cors()); // Allow frontend to connect
-app.use(
-  cors({
-    origin: "https://sewit.vercel.app", // Allow this domain only
-    origin: "*",
-    methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
-    credentials: true, // Allow cookies
-  })
-);
+app.use(cors()); // Allow frontend to connect
+// app.use(
+//   cors({
+//     origin: "https://sewit.vercel.app", // Allow this domain only
+//     origin: "*",
+//     methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
+//     credentials: true, // Allow cookies
+//   })
+// );
 //app.use(express.json()); // Parse JSON bodies
 app.use(express.json({ limit: "50mb" })); // Increase JSON request size limit
 app.use(express.urlencoded({ limit: "50mb", extended: true })); // Increase URL-encoded size limit
@@ -32,17 +34,15 @@ async function checkRoom(roomId) {
     // Access the database and collection
     const db = client.db("room_id");
     const collection = db.collection("room");
-
+    const roomName = "roomId";
     // Check if the room ID exists
-    const existingRoom = await collection.findOne({ roomId: roomId });
+    const existingRoom = await collection.findOne({ roomName: roomId });
     console.log(existingRoom);
 
     if (existingRoom) {
       // Room ID already exists
-      console.log("yes");
       return "Room exists!";
     }
-    console.log("end");
   } catch (error) {
     console.error("Error accessing the database:", error);
     return "An error occurred!";
@@ -65,11 +65,11 @@ async function getPdfIdsByRoomId(roomId) {
 
     // Query to fetch all PDF file names
     const output = await collection
-      .find({ roomId: roomId }, { projection: { fileName: 1 } })
+      .find({ roomId: roomId }, { projection: { name: 1 } })
       .toArray();
 
     // Extract and return the names of the PDFs
-    const pdfIds = output.map((pdf) => pdf.fileName);
+    const pdfIds = output.map((pdf) => pdf.name);
     console.log("PDF IDs:", pdfIds, roomId);
 
     return pdfIds;
@@ -205,22 +205,47 @@ app.post("/api/download", async (req, res) => {
   }
 });
 
-app.post("/upload", async (req, res) => {
+let db;
+async function connectDB() {
   try {
-    const { fileName, pdfData, roomId } = req.body;
-    if (!fileName || !pdfData || !roomId)
-      return res.status(400).json({ error: "Missing file data" });
+    await client.connect();
+    db = client.db("room_id"); // Select database
+    console.log("Connected to MongoDB");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+  }
+}
+connectDB();
+// Multer setup for handling file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-    // Convert JSON array back to ArrayBuffer
-    const arrayBuffer = new Uint8Array(pdfData).buffer;
+app.post("/upload", upload.single("pdf"), async (req, res) => {
+  try {
+    // Connect to the MongoDB client
+    await client.connect();
 
-    // Upload to MongoDB
-    const fileId = await uploadPDF(arrayBuffer, fileName, roomId);
+    // Access the database and collection
+    const db = client.db("room_id");
+    const pdfCollection = db.collection("room"); // Select collection
+    const roomd = req.body.roomId;
 
-    res.json({ success: true, fileId });
+    const newPDF = {
+      name: req.file.originalname,
+      data: req.file.buffer, // Storing PDF as a binary buffer
+      roomId: roomd, // Associate file with a room ID
+    };
+    await pdfCollection.insertOne(newPDF);
+    await pdfCollection.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 10 }
+    ); // 7 days
+    res.json({ message: "PDF uploaded successfully!" });
   } catch (error) {
-    console.error("Error processing upload:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.log(error);
+    res.status(500).json({ error: "Error uploading PDF" });
+  } finally {
+    await client.close();
   }
 });
 
