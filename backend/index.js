@@ -11,7 +11,6 @@ const app = express();
 app.use(
   cors({
     origin: "https://sewit.vercel.app", // Allow this domain only
-    origin: "*",
     methods: "GET, POST, PUT, DELETE", // Allowed HTTP methods
     credentials: true, // Allow cookies
   })
