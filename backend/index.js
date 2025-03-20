@@ -155,7 +155,7 @@ async function uploadPDF(arrayBuffer, fileName, roomId) {
 // Routes
 
 app.get('/api/download/:pdfname', async (req, res) => {
-  const { pdfname } = req.params;
+  const pdfname = decodeURIComponent(req.params.pdfname).trim();
   try {
     await client.connect();
     const db = client.db("room_id"); // Replace with your database name
@@ -226,9 +226,10 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
     const db = client.db("room_id");
     const pdfCollection = db.collection("room"); // Select collection
     const roomd = req.body.roomId;
+    const fileName = req.file.originalname.replace(/\s+/g, '_').trim();
 
     const newPDF = {
-      name: req.file.originalname,
+      name: fileName,
       data: req.file.buffer, // Storing PDF as a binary buffer
       roomId: roomd, // Associate file with a room ID
     };
