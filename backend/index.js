@@ -154,9 +154,8 @@ async function uploadPDF(arrayBuffer, fileName, roomId) {
 
 // Routes
 
-app.post("/api/download", async (req, res) => {
-  const { pdfname } = req.body; // Extract the file Name from the URL
-
+app.get('/api/download/:pdfname', async (req, res) => {
+  const { pdfname } = req.params;
   try {
     await client.connect();
     const db = client.db("room_id"); // Replace with your database name
