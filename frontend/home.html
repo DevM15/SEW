@@ -62,7 +62,7 @@
       async function fetchAndDisplayPdfs() {
         const roomId = getRoomIdFromUrl(); // Extract the room ID from the URL
         const response = await fetch(
-          "https://sewit.vercel.app//api/getPdfNames",
+          "https://sew-backend.vercel.app/api/getPdfNames",
           {
             method: "POST",
             headers: {
@@ -90,7 +90,7 @@
               if (per) {
                 console.log(pdfname);
                 const response = await fetch(
-                  `https://sewit.vercel.app//api/download/${pdfname}`
+                  `https://sew-backend.vercel.app/api/download/${pdfname}`
                 );
                 if (!response.ok) {
                   throw new Error("Failed to download PDF");
@@ -142,7 +142,7 @@
 
             // Send to backend
             let response = await fetch(
-              "https://sewit.vercel.app//upload",
+              "https://sew-backend.vercel.app/upload",
               {
                 method: "POST",
                 body: formData,
