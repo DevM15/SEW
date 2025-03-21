@@ -61,7 +61,7 @@
           const roomId = document.getElementById("room-id").value;
 
           try {
-            const response = await fetch("http://localhost:5000/api/joinRoom", {
+            const response = await fetch("https://sew-backend.vercel.app/api/joinRoom", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -86,7 +86,7 @@
         .getElementById("random-login")
         .addEventListener("click", async () => {
           try {
-            const response = await fetch("http://localhost:5000/api/newRoom");
+            const response = await fetch("https://sew-backend.vercel.app/api/newRoom");
             const data = await response.json();
             const roomId = data.roomId;
             alert(`RoomID : ${roomId} created successfully`);
