@@ -1,5 +1,4 @@
 const express = require("express");
-const multer = require("multer");
 const cors = require("cors");
 const { MongoClient, GridFSBucket, ObjectId } = require("mongodb");
 
@@ -14,7 +13,6 @@ app.use(
     credentials: true, // Allow cookies
   })
 );
-//app.use(express.json()); // Parse JSON bodies
 app.use(express.json({ limit: "50mb" })); // Increase JSON request size limit
 app.use(express.urlencoded({ limit: "50mb", extended: true })); // Increase URL-encoded size limit
 
@@ -32,15 +30,17 @@ async function checkRoom(roomId) {
     // Access the database and collection
     const db = client.db("room_id");
     const collection = db.collection("room");
-    const roomName = "roomId";
+
     // Check if the room ID exists
-    const existingRoom = await collection.findOne({ roomName: roomId });
+    const existingRoom = await collection.findOne({ roomId: roomId });
     console.log(existingRoom);
 
     if (existingRoom) {
       // Room ID already exists
+      console.log("yes");
       return "Room exists!";
     }
+    console.log("end");
   } catch (error) {
     console.error("Error accessing the database:", error);
     return "An error occurred!";
@@ -63,11 +63,11 @@ async function getPdfIdsByRoomId(roomId) {
 
     // Query to fetch all PDF file names
     const output = await collection
-      .find({ roomId: roomId }, { projection: { name: 1 } })
+      .find({ roomId: roomId }, { projection: { fileName: 1 } })
       .toArray();
 
     // Extract and return the names of the PDFs
-    const pdfIds = output.map((pdf) => pdf.name);
+    const pdfIds = output.map((pdf) => pdf.fileName);
     console.log("PDF IDs:", pdfIds, roomId);
 
     return pdfIds;
@@ -134,7 +134,7 @@ async function uploadPDF(arrayBuffer, fileName, roomId) {
       roomId,
       createdAt: new Date(), // Current timestamp
     });
-    await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }); // 7 days
+    await collection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 }); // 7 days
 
     console.log("Collection updated with PDF ID");
 
@@ -154,8 +154,9 @@ async function uploadPDF(arrayBuffer, fileName, roomId) {
 
 // Routes
 
-app.get('/api/download/:pdfname', async (req, res) => {
-  const pdfname = decodeURIComponent(req.params.pdfname).trim();
+app.post("/api/download", async (req, res) => {
+  const { pdfname } = req.body; // Extract the file Name from the URL
+
   try {
     await client.connect();
     const db = client.db("room_id"); // Replace with your database name
@@ -202,52 +203,23 @@ app.get('/api/download/:pdfname', async (req, res) => {
   }
 });
 
-let db;
-async function connectDB() {
+app.post("/upload", async (req, res) => {
   try {
-    await client.connect();
-    db = client.db("room_id"); // Select database
-    console.log("Connected to MongoDB");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-  }
-}
-connectDB();
-// Multer setup for handling file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+    const { fileName, pdfData, roomId } = req.body;
+    if (!fileName || !pdfData || !roomId)
+      return res.status(400).json({ error: "Missing file data" });
 
-app.post("/upload", upload.single("pdf"), async (req, res) => {
-  try {
-    // Connect to the MongoDB client
-    await client.connect();
+    // Convert JSON array back to ArrayBuffer
+    const arrayBuffer = new Uint8Array(pdfData).buffer;
 
-    // Access the database and collection
-    const db = client.db("room_id");
-    const pdfCollection = db.collection("room"); // Select collection
-    const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
-    const roomd = req.body.roomId;
-    const fileName = req.file.originalname.replace(/\s+/g, '_').trim();
+    // Upload to MongoDB
+    const fileId = await uploadPDF(arrayBuffer, fileName, roomId);
 
-    // Upload to GridFS
-    const uploadStream = bucket.openUploadStream(fileName);
-    uploadStream.end(req.file.buffer);
-
-    const newPDF = {
-      name: fileName,
-      data: req.file.buffer, // Storing PDF as a binary buffer
-      roomId: roomd, // Associate file with a room ID
-    };
-    await pdfCollection.insertOne(newPDF);
-    await pdfCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: 10 }
-    ); // 7 days
-    res.json({ message: "PDF uploaded successfully!" });
+    res.json({ success: true, fileId });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Error uploading PDF" });
-  } 
+    console.error("Error processing upload:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.post("/api/joinRoom", (req, res) => {
