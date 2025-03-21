@@ -213,35 +213,36 @@ async function connectDB() {
   }
 }
 connectDB();
-// Multer setup for handling file uploads
+
+// Multer setup for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-app.post("/upload", upload.single("pdf"), async (req, res) => {
+// Upload PDF route (mobile-friendly)
+app.post('/upload', upload.single('pdf'), async (req, res) => {
   try {
-    // Connect to the MongoDB client
     await client.connect();
+    const db = client.db('room_id');
+    const bucket = new GridFSBucket(db, { bucketName: 'pdfs' });
 
-    // Access the database and collection
-    const db = client.db("room_id");
-    const pdfCollection = db.collection("room"); // Select collection
-    const roomd = req.body.roomId;
-    const fileName = req.file.originalname.replace(/\s+/g, '_').trim();
+    // Normalize filename
+    const fileName = req.file.originalname.trim();
 
-    const newPDF = {
-      name: fileName,
-      data: req.file.buffer, // Storing PDF as a binary buffer
-      roomId: roomd, // Associate file with a room ID
-    };
-    await pdfCollection.insertOne(newPDF);
-    await pdfCollection.createIndex(
-      { createdAt: 1 },
-      { expireAfterSeconds: 10 }
-    ); // 7 days
-    res.json({ message: "PDF uploaded successfully!" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Error uploading PDF" });
+    // Upload to GridFS
+    const uploadStream = bucket.openUploadStream(fileName);
+    uploadStream.end(req.file.buffer);
+
+    // Optional: also save metadata to a separate collection (e.g., roomId)
+    await db.collection('room').insertOne({
+      fileName: fileName,
+      roomId: req.body.roomId || 'default',
+      createdAt: new Date(),
+    });
+
+    res.json({ message: 'PDF uploaded successfully!', fileName: fileName });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Upload failed' });
   } finally {
     await client.close();
   }
