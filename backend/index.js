@@ -212,8 +212,7 @@ async function connectDB() {
     console.error("MongoDB connection error:", err);
   }
 }
-connectDB();
-
+// connectDB();
 // Multer setup for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
